@@ -1,38 +1,36 @@
-  name: Scan a project with Black Duck
   
-  on:
-    push:
-      branches: [ main ]
-    pull_request:
-      branches: [ main ]
-    workflow_dispatch:
-  
-  jobs:
-    blackduck:
-      runs-on: ubuntu-latest
-      steps:
-      
-      - name: Checkout the code
-        uses: actions/checkout@v2
- 
-      # Run manual full/intelligent scan
-      - name: Run Baseline Black Duck Scan (manual, workflow dispatch)
-        if: ${{github.event_name == 'workflow_dispatch'}}
-        uses: synopsys-sig-community/blackduck-direct-scan-action@v1
-        with:
-          bd_url: ${{ secrets.BLACKDUCK_URL }}
-          bd_token: ${{ secrets.BLACKDUCK_API_TOKEN }}
-          mode: intelligent
-        env:
-          GITHUB_TOKEN: ${{ github.token }}      
+name: Synopsys Security Testing
 
-      # Run Black Duck rapid scan for pull request/commit/push
-      - name: Black Duck security scan
-        if: ${{github.event_name != 'workflow_dispatch'}}
-        uses: synopsys-sig-community/blackduck-direct-scan-action@v1
+on:
+  push:
+    branches: [ master, main ]
+
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Synopsys Action
+        uses: synopsys-sig/synopsys-action@v1.1.0
         with:
-          bd_url: ${{ secrets.BLACKDUCK_URL }}
-          bd_token: ${{ secrets.BLACKDUCK_API_TOKEN }}
-          upgrade_major: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }} 
+          blackduck_apiToken: ${{ secrets.BLACKDUCK_API_TOKEN }}
+          blackduck_url: ${{ secrets.BLACKDUCK_URL }}
+
+          # Optional parameter. By default, pushes will initiate a full "intelligent" scan and pull requests
+          # will initiate a rapid scan.
+          blackduck_scan_full: false
+          # Required parameter if blackduck_automation_fixpr is enabled
+          # Make sure GITHUB_TOKEN have appropriate permissions
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional parameter. By default, create fix pull requests if vulnerabilities are reported
+          # Passing false will disable fix pull request creation 
+          blackduck_automation_fixpr: true
+          # Optional parameter. The values could be. ALL|NONE|BLOCKER|CRITICAL|MAJOR|MINOR|OK|TRIVIAL|UNSPECIFIED
+          # Single parameter
+          blackduck_scan_failure_severities: "ALL"
+          # multiple parameters
+          # blackduck_scan_failure_severities: "BLOCKER,CRITICAL,TRIVIAL"
